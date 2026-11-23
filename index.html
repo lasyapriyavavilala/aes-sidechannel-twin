@@ -1,119 +1,111 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>AES Side-Channel Digital Twin</title><style>
-  :root{
-    --bg:#070b12; --panel:#0d1420; --panel2:#111a2b; --edge:#1e2d44;
-    --ink:#e6f0ff; --dim:#7e93b4; --cyan:#35e0d8; --green:#4ade80;
-    --amber:#fbbf24; --red:#f87171; --violet:#a78bfa; --grid:#15223a;
-    --mono:"SFMono-Regular",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:radial-gradient(1200px 700px at 70% -10%,#0e1830 0%,var(--bg) 60%);
-    color:var(--ink);font-family:var(--mono);-webkit-font-smoothing:antialiased;overflow-x:hidden}
-  .wrap{max-width:1180px;margin:0 auto;padding:22px 18px 70px}
-  header{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 16px;margin-bottom:4px}
-  h1{font-size:20px;letter-spacing:.5px;margin:0;font-weight:650}
-  h1 .sub{color:var(--cyan)}
-  .tag{font-size:11px;color:var(--dim);border:1px solid var(--edge);border-radius:999px;padding:3px 10px}
-  .lead{color:var(--dim);font-size:13px;margin:6px 0 16px;max-width:820px;line-height:1.5}
-  .grid{display:grid;grid-template-columns:minmax(300px,1fr) minmax(360px,1.25fr);gap:14px}
-  @media(max-width:860px){.grid{grid-template-columns:1fr}}
-  .panel{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--edge);
-    border-radius:14px;padding:14px 15px;position:relative;overflow:hidden}
-  .panel h2{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--dim);margin:0 0 12px;font-weight:600}
-  .panel h2 b{color:var(--cyan);font-weight:600}
-  /* chip */
-  .chip{display:flex;flex-direction:column;gap:12px}
-  .state{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
-  .byte{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;border-radius:8px;
-    background:#0a1322;border:1px solid var(--edge);font-size:clamp(13px,2.4vw,18px);font-weight:600;
-    color:#cfe0ff;position:relative;transition:background .12s,box-shadow .12s,color .12s}
-  .byte.flip{background:#13324a;color:#fff;box-shadow:0 0 0 1px var(--cyan),0 0 16px rgba(53,224,216,.55)}
-  .byte small{position:absolute;top:3px;left:5px;font-size:8px;color:var(--dim);font-weight:500}
-  .cyclebar{display:flex;align-items:center;gap:10px}
-  .clk{font-size:12px;color:var(--dim)}
-  .clk b{color:var(--green);font-size:15px}
-  .op{font-size:12px;color:var(--amber);min-width:150px}
-  .pwr{flex:1;height:10px;border-radius:6px;background:#0a1322;border:1px solid var(--edge);overflow:hidden}
-  .pwr i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--green));transition:width .12s}
-  .pwrval{font-size:11px;color:var(--dim);min-width:80px;text-align:right}
-  .pwrval b{color:var(--ink)}
-  canvas{display:block;width:100%;border-radius:8px}
-  .scope-cap,.cap{font-size:11px;color:var(--dim);margin-top:8px;line-height:1.5}
-  .cap b{color:var(--ink)}
-  /* attacker */
-  .attack{margin-top:14px}
-  .rankrow{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:10px}
-  .rankbox{display:flex;flex-direction:column}
-  .rankbox .k{font-size:10px;letter-spacing:1px;color:var(--dim);text-transform:uppercase}
-  .rankbox .v{font-size:30px;font-weight:700;line-height:1;color:var(--amber);font-variant-numeric:tabular-nums}
-  .rankbox.ok .v{color:var(--green)}
-  .keyreveal{font-size:13px;letter-spacing:1px;color:var(--dim)}
-  .keyreveal b{color:var(--green)}
-  .keyreveal .hidden{color:#33415a}
-  /* controls */
-  .controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:18px;
-    background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:12px 15px}
-  button{font-family:var(--mono);font-size:13px;color:#06121a;background:var(--cyan);border:0;
-    padding:9px 18px;border-radius:8px;cursor:pointer;font-weight:650;letter-spacing:.3px}
-  button:hover{filter:brightness(1.08)}
-  button.ghost{background:transparent;color:var(--ink);border:1px solid var(--edge)}
-  .slider{flex:1;min-width:180px;display:flex;align-items:center;gap:10px}
-  input[type=range]{flex:1;accent-color:var(--cyan)}
-  .counter{font-size:12px;color:var(--dim);min-width:150px}
-  .counter b{color:var(--ink);font-variant-numeric:tabular-nums}
-  .results{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px}
-  .rc{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:11px 13px}
-  .rc .n{font-size:20px;font-weight:700;color:var(--cyan);font-variant-numeric:tabular-nums}
-  .rc .l{font-size:11px;color:var(--dim);margin-top:3px;line-height:1.4}
-  .foot{margin-top:18px;font-size:11px;color:var(--dim);line-height:1.6}
-  .legend{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:middle;margin:0 4px 0 2px}
-
-.defense{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:14px 0 2px;background:linear-gradient(180deg,#101b2e,#0c1422);border:1px solid var(--edge);border-radius:12px;padding:12px 16px}
-.defense .lbl{font-size:12px;color:var(--dim);letter-spacing:.5px}
-.switch{position:relative;width:62px;height:30px;border-radius:999px;background:#2a1520;border:1px solid #5b2330;cursor:pointer;transition:.2s;flex:0 0 auto}
-.switch.on{background:#0f2e22;border-color:#1f6f4f}
-.switch i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#f87171;transition:.2s}
-.switch.on i{left:35px;background:#4ade80}
-.dstate{font-size:14px;font-weight:650}.dstate.off{color:var(--red)}.dstate.on{color:var(--green)}
-.rankbox.protected .v{color:var(--green)}
-.verdict{font-size:13px;font-weight:600}.verdict.cracked{color:var(--red)}.verdict.protected{color:var(--green)}.verdict.working{color:var(--amber)}
+:root{--bg:#070b12;--panel:#0d1420;--panel2:#111a2b;--edge:#1e2d44;--ink:#e6f0ff;--dim:#7e93b4;--cyan:#35e0d8;--green:#4ade80;--amber:#fbbf24;--red:#f87171;--mono:ui-monospace,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 700px at 50% -10%,#0e1830 0%,var(--bg) 60%);color:var(--ink);font-family:var(--mono);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1140px;margin:0 auto;padding:22px 18px 70px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 16px}
+h1{font-size:21px;margin:0;font-weight:650}h1 .sub{color:var(--cyan)}
+.tag{font-size:11px;color:var(--dim);border:1px solid var(--edge);border-radius:999px;padding:3px 10px}
+.lead{color:var(--dim);font-size:13px;margin:6px 0 14px;max-width:860px;line-height:1.55}
+.lead b{color:var(--ink)}
+.controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 16px;background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:12px 16px}
+button{font-family:var(--mono);font-size:13px;color:#06121a;background:var(--cyan);border:0;padding:9px 20px;border-radius:8px;cursor:pointer;font-weight:650}
+button:hover{filter:brightness(1.08)}button.ghost{background:transparent;color:var(--ink);border:1px solid var(--edge)}
+.slider{flex:1;min-width:160px;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--dim)}
+input[type=range]{flex:1;accent-color:var(--cyan)}
+.bigtraces{font-size:13px;color:var(--dim)}.bigtraces b{color:var(--cyan);font-size:18px;font-variant-numeric:tabular-nums}
+/* chip */
+.chipwrap{display:flex;justify-content:center;margin:0 0 20px}
+.chip{position:relative;padding:26px 30px 22px;border-radius:16px;background:linear-gradient(180deg,#132033,#0b1322);border:1px solid #27405f;box-shadow:0 0 0 1px #0a1220,0 14px 40px -18px rgba(53,224,216,.4)}
+.chip .pins{position:absolute;left:28px;right:28px;display:flex;justify-content:space-between}
+.chip .pins.top{top:-7px}.chip .pins.bot{bottom:-7px}
+.chip .pins span{width:10px;height:10px;border-radius:2px;background:linear-gradient(#d9b25a,#9a7a2e)}
+.chip .side{position:absolute;top:28px;bottom:28px;display:flex;flex-direction:column;justify-content:space-between}
+.chip .side.l{left:-7px}.chip .side.r{right:-7px}
+.chip .side span{width:10px;height:10px;border-radius:2px;background:linear-gradient(90deg,#d9b25a,#9a7a2e)}
+.chip .label{text-align:center;font-size:10px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin-bottom:12px}
+.chip .label b{color:var(--cyan)}
+.state{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:min(260px,62vw)}
+.byte{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;border-radius:7px;background:#0a1322;border:1px solid var(--edge);font-size:clamp(12px,2.2vw,16px);font-weight:600;color:#cfe0ff;transition:background .1s,box-shadow .1s,color .1s}
+.byte.flip{background:#143449;color:#fff;box-shadow:0 0 0 1px var(--cyan),0 0 14px rgba(53,224,216,.5)}
+.chipmeta{display:flex;align-items:center;gap:10px;margin-top:14px}
+.chipmeta .clk{font-size:11px;color:var(--dim)}.chipmeta .clk b{color:var(--green);font-size:14px}
+.chipmeta .op{font-size:11px;color:var(--amber);flex:1;text-align:center}
+.pwr{width:120px;height:9px;border-radius:5px;background:#0a1322;border:1px solid var(--edge);overflow:hidden}
+.pwr i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--green));transition:width .1s}
+.leak{text-align:center;font-size:11px;color:var(--amber);margin-top:10px}
+/* battle columns */
+.battle{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:760px){.battle{grid-template-columns:1fr}}
+.side-panel{border-radius:14px;border:1px solid var(--edge);padding:15px 16px;background:linear-gradient(180deg,var(--panel2),var(--panel))}
+.side-panel.attack{border-color:#4a2230;box-shadow:inset 0 0 40px -30px #f87171}
+.side-panel.defense{border-color:#1f4a38;box-shadow:inset 0 0 40px -30px #4ade80}
+.side-panel h3{margin:0 0 3px;font-size:14px;font-weight:700}
+.side-panel.attack h3{color:var(--red)}.side-panel.defense h3{color:var(--green)}
+.side-panel .sub2{font-size:11px;color:var(--dim);margin-bottom:12px;line-height:1.4;min-height:30px}
+.meter{font-size:11px;letter-spacing:.5px;color:var(--dim);text-transform:uppercase;margin:12px 0 4px}
+canvas{display:block;width:100%;border-radius:8px}
+.rankline{display:flex;align-items:baseline;gap:8px;margin-top:4px}
+.rankline .v{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.attack .rankline .v{color:var(--amber)}.defense .rankline .v{color:var(--green)}
+.rankline .k{font-size:11px;color:var(--dim)}
+.verdict{margin-top:10px;font-size:13px;font-weight:650;line-height:1.4;min-height:38px}
+.verdict.cracked{color:var(--red)}.verdict.working{color:var(--amber)}.verdict.safe{color:var(--green)}
+.keyout{font-size:12px;letter-spacing:1px;word-break:break-all}
+.results{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:18px}
+.rc{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:11px 13px}
+.rc .n{font-size:18px;font-weight:700;color:var(--cyan);font-variant-numeric:tabular-nums}
+.rc .l{font-size:11px;color:var(--dim);margin-top:3px;line-height:1.4}
+.foot{margin-top:18px;font-size:11px;color:var(--dim);line-height:1.6}
 </style></head>
 <body><div class="wrap">
 <header><h1>AES Side-Channel <span class="sub">Digital Twin</span></h1>
-<span class="tag">attack &amp; defense, computed live in your browser</span></header>
-<p class="lead">A chip leaks its secret key through its power use, and an attacker can read it back.
-Flip the <b style="color:#4ade80">Countermeasure</b> switch to watch the <i>same</i> attack succeed on an unprotected chip and fail on a protected one. Everything runs live: real AES, simulated power, real attack.</p>
-<div class="defense">
-  <span class="lbl">&#128737; COUNTERMEASURE (masking)</span>
-  <div class="switch" id="switch"><i></i></div>
-  <span class="dstate off" id="dstate">OFF &mdash; chip unprotected</span>
-  <span class="lbl" id="dhint" style="margin-left:auto">the attacker cracks the key</span>
-</div>
-<div class="grid">
-  <div class="panel chip"><h2>The chip &middot; <b>128-bit state register</b></h2>
-    <div class="state" id="state"></div>
-    <div class="cyclebar"><div class="clk">CLK <b id="clk">0</b>/11</div><div class="op" id="op">LOAD plaintext</div></div>
-    <div class="cyclebar"><div class="pwr"><i id="pwrbar"></i></div><div class="pwrval">HD <b id="pwrval">0</b>/128</div></div>
-    <div class="cap">Each clock the register is overwritten; power tracks the <span style="color:var(--cyan)">bits that flip</span>. With masking on, the chip hides each value behind random shares, so the power no longer reveals the secret.</div></div>
-  <div class="panel"><h2>Oscilloscope &middot; <b>power</b> | leak detector &middot; <b>SNR</b></h2>
-    <canvas id="scope" height="150"></canvas>
-    <div class="cap">The chip draws the same power either way &mdash; the attack isn't about <i>how much</i> power, but whether the secret <i>shows up</i> in it.</div>
-    <canvas id="snr" height="120" style="margin-top:12px"></canvas>
-    <div class="cap" id="snrcap">Leak strength (SNR) at the secret: peak <b id="snrnow">0.000</b>.</div></div>
-</div>
-<div class="panel attack"><h2>The attacker &middot; <b>256 key-byte guesses</b></h2>
-  <div class="rankrow">
-    <div class="rankbox" id="rankbox"><span class="k">rank of true key</span><span class="v" id="rank">128</span></div>
-    <div class="rankbox"><span class="k">traces used</span><span class="v" id="tcount" style="color:var(--cyan)">1</span></div>
-    <div class="verdict working" id="verdict">collecting traces&hellip;</div></div>
-  <canvas id="bars" height="150"></canvas>
-  <div class="cap" id="barcap">The correct guess should rise above the rest &mdash; unless masking keeps it buried in the noise.</div></div>
+<span class="tag">attack vs defense &middot; live in your browser</span></header>
+<p class="lead">The same chip, attacked two ways. On the <b style="color:#f87171">left</b> it's unprotected and the attacker reads the secret key straight out of its power use. On the <b style="color:#4ade80">right</b> the chip uses a defense called <b>masking</b>, and the very same attack goes nowhere. Press play and watch both race as traces pile up.</p>
+
 <div class="controls"><button id="play">&#9654; Play</button><button class="ghost" id="reset">&#8634; Reset</button>
   <div class="slider">traces <input type="range" id="scrub" min="0" max="16" value="0" step="0.01"/></div>
-  <div class="counter"><b id="counter">1</b> traces &middot; rank <b id="counter2">128</b></div></div>
+  <div class="bigtraces">traces collected: <b id="tcount">1</b></div></div>
+
+<div class="chipwrap"><div class="chip">
+  <div class="pins top"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="pins bot"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="side l"><span></span><span></span><span></span><span></span></div>
+  <div class="side r"><span></span><span></span><span></span><span></span></div>
+  <div class="label">AES&#8209;128 &middot; <b>encryption engine</b></div>
+  <div class="state" id="state"></div>
+  <div class="chipmeta"><div class="clk">CLK <b id="clk">0</b>/11</div><div class="op" id="op">LOAD plaintext</div>
+    <div class="pwr"><i id="pwrbar"></i></div></div>
+  <div class="leak">&#9889; leaking <b id="pwrval">0</b> bit-flips of power this clock</div>
+</div></div>
+
+<div class="battle">
+  <div class="side-panel attack">
+    <h3>&#9876;&#65039; THE ATTACK &mdash; unprotected chip</h3>
+    <div class="sub2">The attacker guesses one key byte 256 ways and checks which guess best matches the leaked power.</div>
+    <div class="meter">leak detector (does the secret show up?)</div>
+    <canvas id="snrA" height="86"></canvas>
+    <div class="meter">256 key guesses</div>
+    <canvas id="barsA" height="120"></canvas>
+    <div class="rankline"><span class="v" id="rankA">128</span><span class="k">= rank of the true key (1 = cracked)</span></div>
+    <div class="verdict working" id="verdictA">collecting traces&hellip;</div>
+  </div>
+  <div class="side-panel defense">
+    <h3>&#128737;&#65039; THE DEFENSE &mdash; masked chip</h3>
+    <div class="sub2">Masking splits every secret value into random shares, so the power no longer matches the secret.</div>
+    <div class="meter">leak detector (does the secret show up?)</div>
+    <canvas id="snrD" height="86"></canvas>
+    <div class="meter">256 key guesses</div>
+    <canvas id="barsD" height="120"></canvas>
+    <div class="rankline"><span class="v" id="rankD">128</span><span class="k">= rank of the true key (never reaches 1)</span></div>
+    <div class="verdict safe" id="verdictD">&#128737; protected</div>
+  </div>
+</div>
+
 <div class="results" id="results"></div>
-<div class="foot">Unprotected AES is cracked; first-order masking defeats this attack. Model validated against Verilog RTL and the real ASCAD &amp; AES_HD datasets.</div>
+<div class="foot">Unprotected AES is cracked in a few hundred traces; first-order masking defeats this attack. Model validated against Verilog RTL and the real ASCAD &amp; AES_HD datasets.</div>
 </div>
 <script>
 
@@ -181,66 +173,50 @@ function buildTwin(){
 
 (function(){
 const D=buildTwin();
-let mode='off';
 const $=id=>document.getElementById(id);
 const lerp=(a,b,t)=>a+(b-a)*t,clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),hex=v=>v.toString(16).padStart(2,'0');
 const OPS=["LOAD plaintext","AddRoundKey (k0)","Round 1","Round 2","Round 3","Round 4","Round 5","Round 6","Round 7","Round 8","Round 9","Final round"];
-const stateEl=$('state');const cells=[];
-for(let r=0;r<4;r++)for(let c=0;c<4;c++){const d=document.createElement('div');d.className='byte';d.innerHTML='<small>'+(r+c*4)+'</small><span></span>';stateEl.appendChild(d);cells.push(d);}
+const stateEl=$('state'),cells=[];
+for(let r=0;r<4;r++)for(let c=0;c<4;c++){const d=document.createElement('div');d.className='byte';d.innerHTML='<span></span>';stateEl.appendChild(d);cells.push(d);}
 function showCycle(i){const g=D.grid[i],prev=D.grid[Math.max(0,i-1)];
-  for(let r=0;r<4;r++)for(let c=0;c<4;c++){const el=cells[r*4+c];el.querySelector('span').textContent=hex(g[r][c]);el.classList.toggle('flip',i>0&&g[r][c]!==prev[r][c]);}
+  for(let r=0;r<4;r++)for(let c=0;c<4;c++){const el=cells[r*4+c];el.firstChild.textContent=hex(g[r][c]);el.classList.toggle('flip',i>0&&g[r][c]!==prev[r][c]);}
   $('clk').textContent=i;$('op').textContent=OPS[i];const h=i>0?D.hd[i-1]:0;$('pwrbar').style.width=(100*h/128)+'%';$('pwrval').textContent=h;}
 function fit(cv){const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.__cssH||(cv.__cssH=cv.height);
   const nW=Math.round(w*dpr),nH=Math.round(h*dpr);if(cv.width!==nW||cv.height!==nH||!cv.__ctx){cv.width=nW;cv.height=nH;cv.__ctx=cv.getContext('2d');cv.__ctx.setTransform(dpr,0,0,dpr,0,0);}return [cv.__ctx,w,h];}
-function drawScope(cur){const [x,w,h]=fit($('scope'));x.clearRect(0,0,w,h);const t=D.mean,n=t.length,mn=Math.min.apply(null,t),mx=Math.max.apply(null,t);
-  const px=i=>i/(n-1)*w,py=v=>h-6-((v-mn)/(mx-mn))*(h-14),spc=D.spc;
-  if(cur>=0){x.fillStyle='rgba(251,191,36,.12)';x.fillRect(px(cur*spc),0,spc/(n-1)*w,h);}
-  x.fillStyle='rgba(248,113,113,.14)';x.fillRect(px(11*spc),0,spc/(n-1)*w,h);
-  x.beginPath();for(let i=0;i<n;i++){const X=px(i),Y=py(t[i]);i?x.lineTo(X,Y):x.moveTo(X,Y);}
-  x.strokeStyle='#35e0d8';x.lineWidth=1.6;x.shadowColor='rgba(53,224,216,.7)';x.shadowBlur=8;x.stroke();x.shadowBlur=0;}
-function drawSNR(conf){const M=D[mode];const [x,w,h]=fit($('snr'));x.clearRect(0,0,w,h);const s=M.snr,n=s.length,mx=D.scaleMax;
-  const px=i=>i/(n-1)*w,py=v=>h-5-(Math.min(v,mx)/mx)*(h-12);
-  x.strokeStyle='#15223a';x.lineWidth=1;x.beginPath();x.moveTo(0,h-5);x.lineTo(w,h-5);x.stroke();
-  const col=mode==='off'?'#fbbf24':'#4ade80';
+function drawSNR(cv,M,conf,col){const [x,w,h]=fit(cv);x.clearRect(0,0,w,h);const s=M.snr,n=s.length,mx=D.scaleMax;
+  const px=i=>i/(n-1)*w,py=v=>h-4-(Math.min(v,mx)/mx)*(h-10);
+  x.strokeStyle='#15223a';x.lineWidth=1;x.beginPath();x.moveTo(0,h-4);x.lineTo(w,h-4);x.stroke();
   x.beginPath();for(let i=0;i<n;i++){const noise=(Math.sin(i*12.9+conf*30)*0.5+0.5)*mx*0.1*(1-conf);const v=s[i]*conf+noise;const X=px(i),Y=py(v);i?x.lineTo(X,Y):x.moveTo(X,Y);}
-  x.strokeStyle=col;x.lineWidth=1.5;x.shadowColor=col+'99';x.shadowBlur=6;x.stroke();x.shadowBlur=0;
-  if(mode==='off'){x.fillStyle='#f87171';x.beginPath();x.arc(px(M.peak),py(s[M.peak]*conf),3.2,0,7);x.fill();}
-  $('snrnow').textContent=(M.snrMax*conf).toFixed(4);}
-function drawBars(idx){const M=D[mode];const [x,w,h]=fit($('bars'));x.clearRect(0,0,w,h);
+  x.strokeStyle=col;x.lineWidth=1.5;x.shadowColor=col+'99';x.shadowBlur=6;x.stroke();x.shadowBlur=0;}
+function drawBars(cv,M,idx,hotCol){const [x,w,h]=fit(cv);x.clearRect(0,0,w,h);
   const i0=Math.floor(idx),i1=Math.min(i0+1,M.snaps.length-1),f=idx-i0,a=M.snaps[i0],b=M.snaps[i1],tk=D.trueKey,bw=w/256;
-  for(let k=0;k<256;k++){const v=lerp(a[k],b[k],f),bh=v*(h-6);
-    if(k===tk){x.fillStyle=mode==='off'?'#4ade80':'#f87171';x.shadowColor=(mode==='off'?'#4ade80':'#f87171')+'cc';x.shadowBlur=10;}
-    else{x.fillStyle='#24344f';x.shadowBlur=0;}x.fillRect(k*bw,h-bh,Math.max(1,bw-0.6),bh);}x.shadowBlur=0;}
-const R=[["440","traces to break masked ASCAD in the real project"],["8,000","traces to recover the full AES key (unprotected FPGA)"],["0.038 &rarr; ~0","leak in bits/trace: unprotected &rarr; masked"],["2000&times;","how much masking cut the leak here"]];
+  for(let k=0;k<256;k++){const v=lerp(a[k],b[k],f),bh=v*(h-4);
+    if(k===tk){x.fillStyle=hotCol;x.shadowColor=hotCol+'cc';x.shadowBlur=10;}else{x.fillStyle='#24344f';x.shadowBlur=0;}
+    x.fillRect(k*bw,h-bh,Math.max(1,bw-0.6),bh);}x.shadowBlur=0;}
+const R=[["440","traces to break masked ASCAD in the full project"],["8,000","traces to recover the whole AES key (unprotected)"],["0.038 &rarr; ~0","leak in bits/trace: unprotected &rarr; masked"],["~2000&times;","how much masking cut the leak here"]];
 $('results').innerHTML=R.map(c=>'<div class="rc"><div class="n">'+c[0]+'</div><div class="l">'+c[1]+'</div></div>').join('');
 const NMAX=D.off.snaps.length-1;$('scrub').max=NMAX;
 let idx=0,playing=false,last=0,cyc=0,cycT=0;
-function setAttack(i){idx=clamp(i,0,NMAX);$('scrub').value=idx;const M=D[mode];const i0=Math.floor(idx);
-  const tc=M.checks[Math.min(i0,M.checks.length-1)],rk=M.ranks[Math.min(i0,M.ranks.length-1)];
-  $('tcount').textContent=tc;$('counter').textContent=tc;$('rank').textContent=rk;$('counter2').textContent=rk;
-  const conf=clamp(Math.log10(tc+1)/Math.log10(M.checks[M.checks.length-1]+1),0,1);drawSNR(conf);drawBars(idx);
-  const v=$('verdict'),box=$('rankbox');
-  if(mode==='off'){box.classList.remove('protected');
-    if(rk===1){v.className='verdict cracked';v.innerHTML='&#128275; KEY CRACKED &rarr; '+D.keyHex.replace(/(..)/g,'$1 ').trim();}
-    else{v.className='verdict working';v.textContent='cracking… true key at rank '+rk;}
-    $('snrcap').innerHTML='Leak strength (SNR) at the secret: peak <b>'+(M.snrMax*conf).toFixed(4)+'</b> — the secret leaks.';
-  }else{box.classList.add('protected');v.className='verdict protected';
-    v.innerHTML='&#128737; KEY PROTECTED — attack fails (stuck at rank '+rk+')';
-    $('snrcap').innerHTML='Leak strength (SNR) at the secret: <b>'+(M.snrMax*conf).toFixed(4)+'</b> — flattened to noise.';}}
-function setMode(m){mode=m;const on=m==='on';$('switch').classList.toggle('on',on);
-  $('dstate').className='dstate '+m;$('dstate').textContent=on?'ON — chip protected (masking)':'OFF — chip unprotected';
-  $('dhint').textContent=on?'the attack fails':'the attacker cracks the key';
-  $('barcap').innerHTML=on?'With masking, the secret is split into random shares, so the correct bar never separates from the noise — the attack fails.':'The correct guess (<span style="color:var(--green)">green</span>) rises above the rest as evidence builds.';
-  idx=0;playing=false;$('play').textContent='▶ Play';setAttack(0);}
+function render(i){idx=clamp(i,0,NMAX);$('scrub').value=idx;const i0=Math.floor(idx);
+  const tc=D.off.checks[Math.min(i0,D.off.checks.length-1)];$('tcount').textContent=tc;
+  const confA=clamp(Math.log10(tc+1)/Math.log10(D.off.checks[D.off.checks.length-1]+1),0,1);
+  const rA=D.off.ranks[Math.min(i0,D.off.ranks.length-1)],rD=D.on.ranks[Math.min(i0,D.on.ranks.length-1)];
+  drawSNR($('snrA'),D.off,confA,'#fbbf24');drawBars($('barsA'),D.off,idx,rA===1?'#f87171':'#fbbf24');
+  drawSNR($('snrD'),D.on,confA,'#4ade80');drawBars($('barsD'),D.on,idx,'#4ade80');
+  $('rankA').textContent=rA;$('rankD').textContent=rD;
+  const vA=$('verdictA');
+  if(rA===1){vA.className='verdict cracked';vA.innerHTML='&#128275; KEY CRACKED<br><span class="keyout">'+D.keyHex.replace(/(..)/g,'$1 ').trim()+'</span>';}
+  else{vA.className='verdict working';vA.textContent='cracking… the true key is climbing (rank '+rA+')';}
+  const vD=$('verdictD');vD.className='verdict safe';
+  vD.innerHTML=(tc>50?'&#128737; STILL PROTECTED':'&#128737; protected')+' &mdash; the attack can’t separate the key from the noise (rank '+rD+')';}
 function frame(ts){if(!last)last=ts;const dt=ts-last;last=ts;
-  cycT+=dt;if(cycT>260){cycT=0;cyc=(cyc+1)%12;showCycle(cyc);drawScope(cyc);}
-  if(playing){idx+=dt/1000*(NMAX/16);if(idx>=NMAX){idx=NMAX;playing=false;$('play').textContent='▶ Play';}setAttack(idx);}
+  cycT+=dt;if(cycT>260){cycT=0;cyc=(cyc+1)%12;showCycle(cyc);}
+  if(playing){idx+=dt/1000*(NMAX/16);if(idx>=NMAX){idx=NMAX;playing=false;$('play').textContent='▶ Play';}render(idx);}
   requestAnimationFrame(frame);}
 $('play').onclick=()=>{if(idx>=NMAX)idx=0;playing=!playing;$('play').textContent=playing?'❚❚ Pause':'▶ Play';};
-$('reset').onclick=()=>{playing=false;$('play').textContent='▶ Play';setAttack(0);};
-$('scrub').oninput=e=>{playing=false;$('play').textContent='▶ Play';setAttack(parseFloat(e.target.value));};
-$('switch').onclick=()=>setMode(mode==='off'?'on':'off');
-window.addEventListener('resize',()=>{drawScope(cyc);setAttack(idx);});
-showCycle(0);drawScope(0);setMode('off');requestAnimationFrame(frame);
+$('reset').onclick=()=>{playing=false;$('play').textContent='▶ Play';render(0);};
+$('scrub').oninput=e=>{playing=false;$('play').textContent='▶ Play';render(parseFloat(e.target.value));};
+window.addEventListener('resize',()=>render(idx));
+showCycle(0);render(0);requestAnimationFrame(frame);
 })();
 </script></body></html>
