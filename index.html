@@ -167,8 +167,12 @@ function showCycle(i){
 }
 
 // ---- canvas helpers (hi-dpi) ----
-function fit(cv){const dpr=window.devicePixelRatio||1;const w=cv.clientWidth;const h=cv.height;
-  cv.width=w*dpr;cv.height=h*dpr;const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);return [x,w,h];}
+function fit(cv){const dpr=window.devicePixelRatio||1;const w=cv.clientWidth;
+  const h=cv.__cssH||(cv.__cssH=cv.height);            // capture intended CSS height ONCE
+  const needW=Math.round(w*dpr),needH=Math.round(h*dpr);
+  if(cv.width!==needW||cv.height!==needH||!cv.__ctx){  // only reallocate on real size change
+    cv.width=needW;cv.height=needH;cv.__ctx=cv.getContext('2d');cv.__ctx.setTransform(dpr,0,0,dpr,0,0);}
+  return [cv.__ctx,w,h];}
 
 function drawScope(curCycle){
   const [x,w,h]=fit($('scope'));x.clearRect(0,0,w,h);
